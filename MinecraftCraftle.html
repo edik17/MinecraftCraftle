@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Crafting Guesser</title>
+    <style>
+        body {
+            font-family: 'Minecraft', Arial, sans-serif;
+            background-color: #222;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #5af;
+            text-shadow: 2px 2px #000;
+        }
+
+        .game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .inventory {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #3a3a3a;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .item {
+            width: 50px;
+            height: 50px;
+            background-color: #555;
+            border: 2px solid #777;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            text-align: center;
+            cursor: grab;
+            user-select: none;
+            position: relative;
+            border-radius: 4px;
+        }
+
+        .item img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .crafting-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+            margin: 20px auto;
+            width: fit-content;
+            background-color: #3a3a3a;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .crafting-cell {
+            background-color: #555;
+            border: 2px solid #777;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            min-height: 60px;
+        }
+
+        .crafting-cell.highlight {
+            border: 2px dashed #5af;
+        }
+
+        .crafting-cell img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .result-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .result-arrow {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+
+        .result-slot {
+            width: 70px;
+            height: 70px;
+            background-color: #555;
+            border: 2px solid #777;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .attempts {
+            margin: 20px 0;
+            font-size: 18px;
+        }
+
+        .submit-btn {
+            background-color: #5af;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .submit-btn:hover {
+            background-color: #4ae;
+        }
+
+        .clear-btn {
+            background-color: #f55;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .clear-btn:hover {
+            background-color: #e44;
+        }
+
+        .messages {
+            height: 30px;
+            margin: 10px 0;
+            color: #fd5;
+            font-weight: bold;
+        }
+
+        .game-message {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+
+        .win-message {
+            color: #6d5;
+        }
+
+        .lose-message {
+            color: #f55;
+        }
+
+        .new-game-btn {
+            background-color: #5d5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .new-game-btn:hover {
+            background-color: #4c4;
+        }
+
+        .attempt-history {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .attempt-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .attempt-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 30px);
+            grid-template-rows: repeat(3, 30px);
+            gap: 2px;
+            background-color: #444;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .attempt-cell {
+            background-color: #555;
+            border: 1px solid #777;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+        }
+
+        .attempt-result {
+            margin-left: 10px;
+            font-size: 12px;
+            background-color: #444;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .correct {
+            background-color: #6d5;
+            border-color: #4c3;
+        }
+
+        .partially-correct {
+            background-color: #fd5;
+            border-color: #db3;
+        }
+
+        .incorrect {
+            background-color: #f55;
+            border-color: #e33;
+        }
+
+        /* Tooltip style */
+        .tooltip {
+            position: absolute;
+            background-color: #222;
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 10px;
+            z-index: 100;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            display: none;
+        }
+
+        .item:hover .tooltip {
+            display: block;
+        }
+
+        /* Item drag style */
+        .item.dragging {
+            opacity: 0.6;
+        }
+
+        /* Search box */
+        .search-box {
+            margin-bottom: 10px;
+            width: 80%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #777;
+            background-color: #444;
+            color: white;
+        }
+
+        /* Categories */
+        .inventory-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .inventory-tab {
+            padding: 8px 15px;
+            background-color: #444;
+            border: 1px solid #666;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            margin: 0 2px;
+        }
+
+        .inventory-tab.active {
+            background-color: #3a3a3a;
+            border-bottom: none;
+        }
+
+        /* Hide items when dragging */
+        .hide-when-dragging {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Minecraft Crafting Guesser</h1>
+    <div class="game-container">
+        <p>Drag items onto the crafting grid to guess today's recipe. You have 6 attempts.</p>
+
+        <input type="text" class="search-box" id="searchBox" placeholder="Search items...">
+
+        <div class="inventory-tabs">
+            <div class="inventory-tab active" data-category="all">All</div>
+            <div class="inventory-tab" data-category="blocks">Blocks</div>
+            <div class="inventory-tab" data-category="items">Items</div>
+            <div class="inventory-tab" data-category="food">Food</div>
+            <div class="inventory-tab" data-category="materials">Materials</div>
+        </div>
+
+        <div class="inventory" id="inventory">
+            <!-- Items will be populated here by JavaScript -->
+        </div>
+
+        <div class="messages" id="messages"></div>
+
+        <div class="attempts" id="attempts">Attempts: 0/6</div>
+
+        <div class="crafting-grid" id="craftingGrid">
+            <!-- Crafting cells will be populated here by JavaScript -->
+        </div>
+
+        <div class="result-container">
+            <div class="result-arrow">➡️</div>
+            <div class="result-slot" id="resultSlot">?</div>
+        </div>
+
+        <button class="submit-btn" id="submitBtn">Craft & Submit</button>
+        <button class="clear-btn" id="clearBtn">Clear Grid</button>
+
+        <div class="game-message win-message" id="winMessage" style="display: none;">
+            Correct! You crafted a <span id="correctItemName"></span>!
+        </div>
+
+        <div class="game-message lose-message" id="loseMessage" style="display: none;">
+            Out of attempts! The recipe was for a <span id="correctRecipeName"></span>.
+        </div>
+
+        <button class="new-game-btn" id="newGameBtn" style="display: none;">New Recipe</button>
+
+        <div class="attempt-history" id="attemptHistory">
+            <!-- Previous attempts will be shown here -->
+        </div>
+    </div>
+
+    <script>
+        // Minecraft item categories
+        const itemCategories = {
+            blocks: [
+                "Cobblestone", "Stone", "Wood Planks", "Crafting Table", "Furnace",
+                "Chest", "Bookshelf", "Obsidian", "Glass", "Glowstone",
+                "TNT", "Redstone Lamp", "Jukebox", "Noteblock", "Piston",
+                "Dispenser", "Dropper", "Hopper", "Observer", "Daylight Detector"
+            ],
+            items: [
+                "Stick", "Bucket", "Compass", "Clock", "Map",
+                "Shears", "Flint and Steel", "Shield", "Fishing Rod", "Lead",
+                "Name Tag", "Saddle", "Minecart", "Boat", "Elytra"
+            ],
+            food: [
+                "Bread", "Cake", "Pumpkin Pie", "Cookie", "Mushroom Stew",
+                "Rabbit Stew", "Suspicious Stew", "Golden Apple", "Golden Carrot", "Cooked Chicken",
+                "Cooked Porkchop", "Cooked Beef", "Baked Potato", "Apple", "Carrot"
+            ],
+            materials: [
+                "Iron Ingot", "Gold Ingot", "Diamond", "Emerald", "Redstone",
+                "Coal", "Lapis Lazuli", "Glowstone Dust", "String", "Leather",
+                "Paper", "Book", "Feather", "Gunpowder", "Flint",
+                "Blaze Rod", "Blaze Powder", "Ender Pearl", "Slimeball", "Nether Quartz",
+                "Bone", "Clay Ball", "Brick", "Nether Brick", "Wheat",
+                "Sugar", "Egg", "Milk Bucket"
+            ]
+        };
+
+        // Combine all categories
+        const allItems = [
+            ...itemCategories.blocks,
+            ...itemCategories.items,
+            ...itemCategories.food,
+            ...itemCategories.materials
+        ].sort();
+
+        // Minecraft crafting recipes
+        const recipes = [
+            {
+                name: "Crafting Table",
+                grid: [
+                    "Wood Planks", "Wood Planks", "",
+                    "Wood Planks", "Wood Planks", "",
+                    "", "", ""
+                ],
+                result: "Crafting Table"
+            },
+            {
+                name: "Furnace",
+                grid: [
+                    "Cobblestone", "Cobblestone", "Cobblestone",
+                    "Cobblestone", "", "Cobblestone",
+                    "Cobblestone", "Cobblestone", "Cobblestone"
+                ],
+                result: "Furnace"
+            },
+            {
+                name: "Chest",
+                grid: [
+                    "Wood Planks", "Wood Planks", "Wood Planks",
+                    "Wood Planks", "", "Wood Planks",
+                    "Wood Planks", "Wood Planks", "Wood Planks"
+                ],
+                result: "Chest"
+            }
+        ];
+
+        // Game variables
+        let currentRecipe;
+        let currentAttempt = 0;
+        const maxAttempts = 6;
+        let gameOver = false;
+        let craftingGrid = Array(9).fill("");
+
+        // DOM elements
+        const inventoryEl = document.getElementById('inventory');
+        const craftingGridEl = document.getElementById('craftingGrid');
+        const resultSlotEl = document.getElementById('resultSlot');
+        const submitBtn = document.getElementById('submitBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const messagesEl = document.getElementById('messages');
+        const attemptsEl = document.getElementById('attempts');
+        const winMessageEl = document.getElementById('winMessage');
+        const loseMessageEl = document.getElementById('loseMessage');
+        const correctItemNameEl = document.getElementById('correctItemName');
+        const correctRecipeNameEl = document.getElementById('correctRecipeName');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const attemptHistoryEl = document.getElementById('attemptHistory');
+        const searchBoxEl = document.getElementById('searchBox');
+        const inventoryTabsEl = document.querySelectorAll('.inventory-tab');
+
+        // Initialize the game
+        function initGame() {
+            // Reset game state
+            currentAttempt = 0;
+            gameOver = false;
+            craftingGrid = Array(9).fill("");
+
+            // Update attempts display
+            attemptsEl.textContent = `Attempts: ${currentAttempt}/${maxAttempts}`;
+
+            // Clear messages
+            messagesEl.textContent = '';
+
+            // Hide game over messages
+            winMessageEl.style.display = 'none';
+            loseMessageEl.style.display = 'none';
+            newGameBtn.style.display = 'none';
+
+            // Clear attempt history
+            attemptHistoryEl.innerHTML = '';
+
+            // Select a random recipe
+            selectRandomRecipe();
+
+            // Create crafting grid
+            createCraftingGrid();
+
+            // Populate inventory with items
+            populateInventory();
+
+            // Clear result slot
+            resultSlotEl.textContent = '?';
+        }
+
+        // Select a random recipe
+        function selectRandomRecipe() {
+            const index = Math.floor(Math.random() * recipes.length);
+            currentRecipe = recipes[index];
+        }
+
+        // Create the crafting grid
+        function createCraftingGrid() {
+            craftingGridEl.innerHTML = '';
+
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('crafting-cell');
+                cell.dataset.index = i;
+
+                // Add drop event handlers
+                cell.addEventListener('dragover', handleDragOver);
+                cell.addEventListener('drop', handleDrop);
+                cell.addEventListener('dragenter', handleDragEnter);
+                cell.addEventListener('dragleave', handleDragLeave);
+
+                craftingGridEl.appendChild(cell);
+            }
+        }
+
+        // Populate inventory with items
+        // Populate inventory with items and images
+        function populateInventory(category = 'all', searchTerm = '') {
+            inventoryEl.innerHTML = '';  // Clear current inventory
+
+            // Determine which items to show based on category
+            let itemsToShow = [];
+            if (category === 'all') {
+                itemsToShow = allItems;  // Show all items
+            } else {
+                itemsToShow = itemCategories[category];  // Show items of the selected category
+            }
+
+            // Filter items based on the search term
+            if (searchTerm) {
+                itemsToShow = itemsToShow.filter(item => item.toLowerCase().includes(searchTerm));  // Case-insensitive filter
+            }
+
+            // Create and display the item elements
+            itemsToShow.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.classList.add('item');
+                itemEl.draggable = true;
+                itemEl.dataset.item = item;
+
+                // Create image element for each item
+                const itemImg = document.createElement('img');
+
+                // TEST: Directly set image source for testing
+                itemImg.src = `images/${item}.png`;  // Check if the image path is correct
+
+                itemImg.alt = item;  // Set alt text for accessibility
+
+                // Add image to the item element
+                itemEl.appendChild(itemImg);
+
+                // Add tooltip with the full item name
+                const tooltip = document.createElement('div');
+                tooltip.classList.add('tooltip');
+                tooltip.textContent = item;
+                itemEl.appendChild(tooltip);
+
+                // Add drag event handlers
+                itemEl.addEventListener('dragstart', handleDragStart);
+                itemEl.addEventListener('dragend', handleDragEnd);
+
+                inventoryEl.appendChild(itemEl);  // Add item to inventory
+            });
+        }
+
+
+
+        // Handle drag start
+        function handleDragStart(e) {
+            e.dataTransfer.setData('text/plain', e.target.dataset.item);
+            e.target.classList.add('dragging');
+
+            // Hide tooltip when dragging
+            const tooltip = e.target.querySelector('.tooltip');
+            if (tooltip) {
+                tooltip.classList.add('hide-when-dragging');
+            }
+        }
+
+        // Handle drag end
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+
+            // Show tooltip again
+            const tooltip = e.target.querySelector('.tooltip');
+            if (tooltip) {
+                tooltip.classList.remove('hide-when-dragging');
+            }
+        }
+
+        // Handle drag over
+        function handleDragOver(e) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Handle drag enter
+        function handleDragEnter(e) {
+            e.preventDefault();
+            e.target.classList.add('highlight');
+        }
+
+        // Handle drag leave
+        function handleDragLeave(e) {
+            e.target.classList.remove('highlight');
+        }
+
+        // Handle drop
+        function handleDrop(e) {
+            e.preventDefault();
+
+            // Remove highlight
+            e.target.classList.remove('highlight');
+
+            // Get item and grid cell info
+            const item = e.dataTransfer.getData('text/plain');
+            const index = e.target.dataset.index;
+
+            // Update grid data
+            craftingGrid[index] = item;
+
+            // Update visual grid
+            updateCraftingGrid();
+
+            return false;
+        }
+
+        // Update the crafting grid display
+        function updateCraftingGrid() {
+            const cells = craftingGridEl.querySelectorAll('.crafting-cell');
+
+            cells.forEach((cell, index) => {
+                const item = craftingGrid[index];
+
+                if (item) {
+                    // Clear existing content
+                    cell.innerHTML = '';
+
+                    // Create new item div
+                    const itemEl = document.createElement('div');
+                    itemEl.classList.add('item');
+                    itemEl.dataset.item = item;
+                    itemEl.textContent = item.split(' ').map(word => word.charAt(0)).join('');
+
+                    // Add tooltip
+                    const tooltip = document.createElement('div');
+                    tooltip.classList.add('tooltip');
+                    tooltip.textContent = item;
+                    itemEl.appendChild(tooltip);
+
+                    // Add click to remove
+                    itemEl.addEventListener('click', () => {
+                        craftingGrid[index] = '';
+                        updateCraftingGrid();
+                    });
+
+                    cell.appendChild(itemEl);
+                } else {
+                    cell.innerHTML = '';
+                }
+            });
+        }
+
+        // Clear the crafting grid
+        function clearCraftingGrid() {
+            craftingGrid = Array(9).fill("");
+            updateCraftingGrid();
+        }
+
+        // Submit a crafting attempt
+        function submitCraftingAttempt() {
+            if (gameOver) {
+                messagesEl.textContent = 'Game is over. Start a new game!';
+                return;
+            }
+
+            // Check if grid is empty
+            if (craftingGrid.every(item => !item)) {
+                messagesEl.textContent = 'Place at least one item on the grid!';
+                return;
+            }
+
+            // Increment attempt counter
+            currentAttempt++;
+
+            // Update attempts display
+            attemptsEl.textContent = `Attempts: ${currentAttempt}/${maxAttempts}`;
+
+            // Check if crafting matches the target recipe
+            const correct = checkCraftingMatch();
+
+            // Add to attempt history
+            addAttemptToHistory();
+
+            // Clear the grid for next attempt
+            clearCraftingGrid();
+
+            // Check game state
+            if (correct) {
+                // Win condition
+                winMessageEl.style.display = 'block';
+                correctItemNameEl.textContent = currentRecipe.result;
+                newGameBtn.style.display = 'inline-block';
+                resultSlotEl.textContent = currentRecipe.result;
+                gameOver = true;
+            } else if (currentAttempt >= maxAttempts) {
+                // Lose condition
+                loseMessageEl.style.display = 'block';
+                correctRecipeNameEl.textContent = currentRecipe.result;
+                newGameBtn.style.display = 'inline-block';
+                resultSlotEl.textContent = currentRecipe.result;
+                gameOver = true;
+            }
+        }
+
+        // Check if crafting matches the target recipe
+        function checkCraftingMatch() {
+            // For this game, we're simplifying and just checking if the non-empty slots match
+            for (let i = 0; i < 9; i++) {
+                // If recipe has an item here but grid doesn't match, it's wrong
+                if (currentRecipe.grid[i] && currentRecipe.grid[i] !== craftingGrid[i]) {
+                    return false;
+                }
+
+                // If grid has an item but recipe doesn't have anything there, it's wrong
+                if (craftingGrid[i] && !currentRecipe.grid[i]) {
+                    return false;
+                }
+            }
+
+            // All checks passed, it's a match
+            return true;
+        }
+
+        // Add attempt to history
+        function addAttemptToHistory() {
+            const attemptRow = document.createElement('div');
+            attemptRow.classList.add('attempt-row');
+
+            // Create mini grid
+            const attemptGrid = document.createElement('div');
+            attemptGrid.classList.add('attempt-grid');
+
+            // Add cells
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('attempt-cell');
+
+                if (craftingGrid[i]) {
+                    cell.textContent = craftingGrid[i].split(' ').map(word => word.charAt(0)).join('');
+                }
+
+                attemptGrid.appendChild(cell);
+            }
+
+            // Add to history
+            attemptRow.appendChild(attemptGrid);
+            attemptHistoryEl.appendChild(attemptRow);
+        }
+
+        // Event Listeners
+        submitBtn.addEventListener('click', submitCraftingAttempt);
+        clearBtn.addEventListener('click', clearCraftingGrid);
+        newGameBtn.addEventListener('click', initGame);
+        searchBoxEl.addEventListener('input', handleSearch);
+
+        // Initialize the game when page loads
+        initGame();
+
+        // Handle search box input
+        function handleSearch() {
+            const searchTerm = searchBoxEl.value.toLowerCase();  // Get the search term and make it lowercase
+            const activeTab = document.querySelector('.inventory-tab.active');
+            const category = activeTab ? activeTab.dataset.category : 'all';  // Get the active tab category
+
+            // Call populateInventory to filter and display the inventory
+            populateInventory(category, searchTerm);
+        }
+
+        // Populate inventory based on search term and category
+        function populateInventory(category = 'all', searchTerm = '') {
+            inventoryEl.innerHTML = '';  // Clear current inventory
+
+            // Determine which items to show based on category
+            let itemsToShow = [];
+            if (category === 'all') {
+                itemsToShow = allItems;  // Show all items
+            } else {
+                itemsToShow = itemCategories[category];  // Show items of the selected category
+            }
+
+            // Filter items based on the search term
+            if (searchTerm) {
+                itemsToShow = itemsToShow.filter(item => item.toLowerCase().includes(searchTerm));  // Case-insensitive filter
+            }
+
+            // Create and display the item elements
+            itemsToShow.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.classList.add('item');
+                itemEl.draggable = true;
+                itemEl.dataset.item = item;
+                itemEl.textContent = item.split(' ').map(word => word.charAt(0)).join('');  // Show first letters of item name
+
+                // Add tooltip with full item name
+                const tooltip = document.createElement('div');
+                tooltip.classList.add('tooltip');
+                tooltip.textContent = item;
+                itemEl.appendChild(tooltip);
+
+                // Add drag event listeners
+                itemEl.addEventListener('dragstart', handleDragStart);
+                itemEl.addEventListener('dragend', handleDragEnd);
+
+                inventoryEl.appendChild(itemEl);  // Add item to inventory
+            });
+        }
+
+        // Event listener for search box input
+        searchBoxEl.addEventListener('input', handleSearch);
+
+
+    </script>
+</body>
+
+</html>
